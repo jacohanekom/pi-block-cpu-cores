@@ -1,0 +1,13 @@
+[Unit]
+Description=Route all hardware IRQs to CPU core 0
+After=sysinit.target
+Before=network.target picam-rtsp.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/pi-block-cpu-cores/set-irq-affinity.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

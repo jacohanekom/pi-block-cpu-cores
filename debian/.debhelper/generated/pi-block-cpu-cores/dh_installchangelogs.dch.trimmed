@@ -1,0 +1,5 @@
+pi-block-cpu-cores (1.0.0+202606041025-1) stable; urgency=low
+
+  * Initial release.
+
+ -- Jaco Hanekom <jhanekom@gmail.com>  Thu, 04 Jun 2026 10:24:30 +0000

@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_build:
+	# nothing to compile
+
+override_dh_auto_install:
+	install -D -m 755 set-irq-affinity.sh \
+		debian/pi-block-cpu-cores/usr/lib/pi-block-cpu-cores/set-irq-affinity.sh
+	install -D -m 644 irq-affinity.service \
+		debian/pi-block-cpu-cores/usr/lib/systemd/system/irq-affinity.service
+
+override_dh_installsystemd:
+	dh_installsystemd --name=irq-affinity --no-restart-on-upgrade --no-stop-on-upgrade

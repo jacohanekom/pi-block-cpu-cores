@@ -1,0 +1,4 @@
+d001ed2b32f49c3bb0ae78b37992ec5e  usr/lib/pi-block-cpu-cores/set-irq-affinity.sh
+a39bb5934951f29da8add6b7609e9827  usr/lib/systemd/system/irq-affinity.service
+ef77f59f7183a021a76e18e23213715e  usr/share/doc/pi-block-cpu-cores/changelog.Debian.gz
+8c777c2236f2b6ee538b78044727d1d7  usr/share/doc/pi-block-cpu-cores/copyright

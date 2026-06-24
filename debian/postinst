@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+case "$1" in
+    configure)
+        echo ""
+        echo "pi-block-cpu-cores installed."
+        echo "To complete CPU isolation, add to /boot/firmware/cmdline.txt:"
+        echo "  isolcpus=1,2,3 nohz_full=1,2,3 rcu_nocbs=1,2,3 irqaffinity=0"
+        echo "Then reboot."
+        echo ""
+        ;;
+esac
+#DEBHELPER#
+
+# Run immediately on first install if systemd is active — use start, never
+# restart, because Type=oneshot RemainAfterExit units refuse a restart when
+# not currently active.
+if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+    systemctl enable irq-affinity.service || true
+    if ! systemctl is-active --quiet irq-affinity.service; then
+        systemctl start irq-affinity.service || true
+    fi
+fi
+exit 0

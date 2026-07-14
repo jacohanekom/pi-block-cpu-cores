@@ -18,7 +18,7 @@ The post-install script enables and starts the `irq-affinity` systemd service au
 
 ### From the APT repository
 
-CI publishes to a signed APT repository hosted on Cloudflare R2, with two channels:
+CI publishes to a signed APT repository (shared with other aipicam Raspberry Pi packages) hosted on Cloudflare R2, with two channels:
 
 - **`main`** — pushing a `v*` tag publishes the clean release version here.
 - **`nightly`** — every push (to any branch, and PRs) publishes a dev build here, versioned with a `+git<shortsha>` suffix.
@@ -26,19 +26,17 @@ CI publishes to a signed APT repository hosted on Cloudflare R2, with two channe
 Add the repo and its signing key, then install normally:
 
 ```bash
-curl -fsSL https://<your-r2-public-url>/pubkey.asc | sudo gpg --dearmor -o /usr/share/keyrings/pi-block-cpu-cores.gpg
+curl -fsSL https://repo.aipicam.com/pubkey.asc | sudo gpg --dearmor -o /usr/share/keyrings/aipicam.gpg
 
 # stable releases
-echo "deb [signed-by=/usr/share/keyrings/pi-block-cpu-cores.gpg] https://<your-r2-public-url> main main" | sudo tee /etc/apt/sources.list.d/pi-block-cpu-cores.list
+echo "deb [signed-by=/usr/share/keyrings/aipicam.gpg] https://repo.aipicam.com main main" | sudo tee /etc/apt/sources.list.d/aipicam.list
 
 # or nightly builds instead
-echo "deb [signed-by=/usr/share/keyrings/pi-block-cpu-cores.gpg] https://<your-r2-public-url> nightly main" | sudo tee /etc/apt/sources.list.d/pi-block-cpu-cores.list
+echo "deb [signed-by=/usr/share/keyrings/aipicam.gpg] https://repo.aipicam.com nightly main" | sudo tee /etc/apt/sources.list.d/aipicam.list
 
 sudo apt-get update
 sudo apt-get install pi-block-cpu-cores
 ```
-
-Replace `<your-r2-public-url>` with the bucket's public URL or custom domain (enable public access for the `aipicam-test-packages` R2 bucket, or bind a custom domain to it, in the Cloudflare dashboard).
 
 #### CI setup
 

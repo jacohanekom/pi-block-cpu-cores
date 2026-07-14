@@ -7,13 +7,35 @@ on:
 jobs:
   build-deb:
     runs-on: ubuntu-latest
+    env:
+      R2_BUCKET: aipicam-test-packages
+      AWS_DEFAULT_REGION: auto
+      AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - uses: actions/checkout@v4
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential debhelper devscripts
+          sudo apt-get install -y --no-install-recommends build-essential debhelper devscripts reprepro gnupg
+
+      - name: Determine target apt distribution
+        id: dist
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "codename=main" >> "$GITHUB_OUTPUT"
+          else
+            echo "codename=nightly" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add dev-build suffix to changelog version
+        if: ${{ steps.dist.outputs.codename == 'nightly' }}
+        env:
+          DEBEMAIL: ci@github.actions
+          DEBFULLNAME: GitHub Actions
+        run: |
+          dch --newversion "$(dpkg-parsechangelog -S Version)+git$(git rev-parse --short HEAD)" \
+            --distribution UNRELEASED -b "Automated CI build"
 
       - name: Build package
         run: dpkg-buildpackage -us -uc -b
@@ -28,3 +50,36 @@ jobs:
         with:
           name: pi-block-cpu-cores-deb
           path: dist/*
+
+      - name: Import GPG signing key
+        run: printf '%s' "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Render reprepro config
+        run: |
+          mkdir -p apt-repo/conf
+          sed "s/__GPG_KEY_ID__/${{ secrets.GPG_KEY_ID }}/" \
+            .github/reprepro/distributions.tmpl > apt-repo/conf/distributions
+
+      - name: Fetch existing repo state from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          aws s3 sync "s3://${R2_BUCKET}" apt-repo \
+            --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com" \
+            --exclude "conf/*"
+
+      - name: Add package to repo
+        run: reprepro -b apt-repo includedeb ${{ steps.dist.outputs.codename }} dist/*.deb
+
+      - name: Export public key
+        run: gpg --export --armor "${{ secrets.GPG_KEY_ID }}" > apt-repo/pubkey.asc
+
+      - name: Publish repo to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          aws s3 sync apt-repo "s3://${R2_BUCKET}" \
+            --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com" \
+            --exclude "conf/*" --delete

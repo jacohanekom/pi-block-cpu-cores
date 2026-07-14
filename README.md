@@ -16,6 +16,51 @@ sudo dpkg -i pi-block-cpu-cores_*.deb
 
 The post-install script enables and starts the `irq-affinity` systemd service automatically.
 
+### From the APT repository
+
+CI publishes to a signed APT repository hosted on Cloudflare R2, with two channels:
+
+- **`main`** — pushing a `v*` tag publishes the clean release version here.
+- **`nightly`** — every push (to any branch, and PRs) publishes a dev build here, versioned with a `+git<shortsha>` suffix.
+
+Add the repo and its signing key, then install normally:
+
+```bash
+curl -fsSL https://<your-r2-public-url>/pubkey.asc | sudo gpg --dearmor -o /usr/share/keyrings/pi-block-cpu-cores.gpg
+
+# stable releases
+echo "deb [signed-by=/usr/share/keyrings/pi-block-cpu-cores.gpg] https://<your-r2-public-url> main main" | sudo tee /etc/apt/sources.list.d/pi-block-cpu-cores.list
+
+# or nightly builds instead
+echo "deb [signed-by=/usr/share/keyrings/pi-block-cpu-cores.gpg] https://<your-r2-public-url> nightly main" | sudo tee /etc/apt/sources.list.d/pi-block-cpu-cores.list
+
+sudo apt-get update
+sudo apt-get install pi-block-cpu-cores
+```
+
+Replace `<your-r2-public-url>` with the bucket's public URL or custom domain (enable public access for the `aipicam-test-packages` R2 bucket, or bind a custom domain to it, in the Cloudflare dashboard).
+
+#### CI setup
+
+The `build.yml` workflow needs these repository secrets:
+
+| Secret | Purpose |
+| --- | --- |
+| `R2_ACCOUNT_ID` | Cloudflare account ID (used to build the R2 S3 endpoint URL) |
+| `R2_ACCESS_KEY_ID` | R2 API token access key ID |
+| `R2_SECRET_ACCESS_KEY` | R2 API token secret access key |
+| `GPG_PRIVATE_KEY` | ASCII-armored, **passphrase-less** private key used to sign the repo (`gpg --export-secret-keys --armor <key-id>`) |
+| `GPG_KEY_ID` | Full fingerprint of that key |
+
+To generate a dedicated signing key:
+
+```bash
+gpg --batch --passphrase '' --quick-generate-key "pi-block-cpu-cores repo signing <you@example.com>" rsa4096 sign never
+gpg --export-secret-keys --armor <key-id>   # -> GPG_PRIVATE_KEY secret
+```
+
+The workflow exports the matching public key to `pubkey.asc` at the bucket root on every run, so it stays in sync automatically (including after key rotation) — no manual upload needed.
+
 ### Complete CPU isolation (required for full effect)
 
 Add the following to `/boot/firmware/cmdline.txt` (all on one line):
